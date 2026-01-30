@@ -10,10 +10,12 @@
         input,button{ width:100%; padding:10px; margin-top:10px; box-sizing: border-box; }
         button{ background:#4CAF50; border:none; color:white; cursor:pointer; font-weight: bold; }
         button:hover{ background:#45a049; }
-        /* ستايل قائمة المستخدمين الجديد */
+        /* ستايل قائمة المستخدمين */
         .users-list { width: 100%; max-width: 410px; margin-bottom: 30px; }
         .user-item { background: white; padding: 15px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd; }
+        .action-btns { display: flex; gap: 5px; }
         .view-btn { width: auto; margin-top: 0; background: #2196F3; padding: 5px 15px; }
+        .del-btn { width: auto; margin-top: 0; background: #f44336; padding: 5px 15px; }
     </style>
 </head>
 <body>
@@ -41,24 +43,52 @@
 <script type="module">
 import { auth, db } from "./firebase.js";
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
-import { doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+import { doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
 
-// وظيفة عرض داشبورد أي كود - تم تغيير الرابط إلى user.html
+// وظيفة عرض داشبورد أي كود
 window.viewDashboard = (code) => {
     localStorage.setItem("viewingCode", code);
     window.location.href = 'user.html'; 
 };
 
-// تحميل قائمة الـ Users
+// وظيفة الحذف النهائي وإتاحة الكود مرة أخرى
+window.deleteAccount = async (uid, code) => {
+    if(!confirm(`هل أنت متأكد من حذف الحساب صاحب الكود (${code}) نهائياً؟`)) return;
+
+    try {
+        // 1. حذف المرجع من usersByCode (لجعل الكود متاحاً فوراً)
+        await deleteDoc(doc(db, "usersByCode", code.toString()));
+        
+        // 2. حذف بيانات الصلاحيات من users
+        await deleteDoc(doc(db, "users", uid));
+        
+        alert("تم حذف الحساب بنجاح والكود أصبح متاحاً للاستخدام مرة أخرى.");
+        location.reload();
+    } catch (e) {
+        alert("Error deleting user: " + e.message);
+    }
+};
+
+// تحميل قائمة الـ Users وعرض الإيميلات
 async function loadUsersList() {
     const container = document.getElementById("usersContainer");
-    const querySnapshot = await getDocs(collection(db, "usersByCode"));
-    querySnapshot.forEach((doc) => {
-        if (doc.id === "1") return; // تجاهل كود الأدمن في القائمة
+    const querySnapshot = await getDocs(collection(db, "users"));
+    
+    querySnapshot.forEach((userDoc) => {
+        const data = userDoc.data();
+        if (data.role === "admin") return; // تجاهل الأدمن
+
         const div = document.createElement("div");
         div.className = "user-item";
-        div.innerHTML = `<span>Brand Code: <b>${doc.id}</b></span> 
-                         <button class="view-btn" onclick="viewDashboard('${doc.id}')">View</button>`;
+        div.innerHTML = `
+            <div style="display:flex; flex-direction:column;">
+                <span>Code: <b>${data.brandCode}</b></span>
+                <small style="color:#777; font-size:11px;">${data.email || ""}</small>
+            </div>
+            <div class="action-btns">
+                <button class="view-btn" onclick="viewDashboard('${data.brandCode}')">View</button>
+                <button class="del-btn" onclick="deleteAccount('${userDoc.id}', '${data.brandCode}')">Del</button>
+            </div>`;
         container.appendChild(div);
     });
 }
@@ -71,9 +101,10 @@ addBtn.onclick = async () => {
     const code = Number(document.getElementById("userCode").value);
 
     if (!email || !password || !code) return alert("All fields required");
-    if (code < 2) return alert("Brand code must be 2 or higher (1 is for Admin)");
+    if (code < 2) return alert("Brand code must be 2 or higher");
 
     try {
+        // التحقق هل الكود مستخدم حالياً؟
         const codeRef = doc(db, "usersByCode", code.toString());
         const codeSnap = await getDoc(codeRef);
         if (codeSnap.exists()) return alert("This brand code is already taken!");
@@ -81,8 +112,12 @@ addBtn.onclick = async () => {
         // إنشاء حساب جديد
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
 
-        // حفظ البيانات مع تغيير المسمى لـ user
-        await setDoc(doc(db, "users", userCred.user.uid), { role: "user", brandCode: code });
+        // حفظ البيانات
+        await setDoc(doc(db, "users", userCred.user.uid), { 
+            role: "user", 
+            brandCode: code, 
+            email: email // حفظنا الإيميل هنا لنعرضه في القائمة
+        });
         await setDoc(doc(db, "usersByCode", code.toString()), { uid: userCred.user.uid });
 
         alert("User added successfully!");
