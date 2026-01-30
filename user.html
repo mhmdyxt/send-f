@@ -1,160 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Dashboard</title>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-<style>
-    body {
-        font-family:'Segoe UI';
-        background:#f4f7f9;
-        margin:0;
-        padding:20px;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-    }
-    .header {
-        background:#4CAF50;
-        color:white;
-        width:100%;
-        text-align:center;
-        padding:15px;
-        border-radius:8px;
-        margin-bottom:20px;
-    }
-    .link-box {
-        background:white;
-        padding:20px;
-        border-radius:12px;
-        width:100%;
-        max-width:600px;
-        margin-bottom:30px;
-        border:1px solid #e0e0e0;
-        text-align:center;
-    }
-    #clientLink a {
-        color:#4CAF50;
-        font-weight:bold;
-        word-break:break-all;
-        text-decoration:none;
-    }
-    #gallery {
-        display:grid;
-        grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
-        gap:20px;
-        width:100%;
-        max-width:1200px;
-    }
-    .media-item {
-        background:white;
-        border-radius:12px;
-        overflow:hidden;
-        box-shadow:0 4px 12px rgba(0,0,0,0.08);
-        display:flex;
-        flex-direction:column;
-    }
-    .media-container {
-        height:180px;
-        background:#fafafa;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-    }
-    .media-item img,
-    .media-item video {
-        width:100%;
-        height:100%;
-        object-fit:cover;
-    }
-    .file-icon {
-        font-size:50px;
-    }
-    .media-footer {
-        padding:12px;
-    }
-    .actions {
-        display:flex;
-        gap:10px;
-        justify-content:center;
-    }
-    .download-btn {
-        background:#4CAF50;
-        color:white;
-        padding:8px 12px;
-        border-radius:6px;
-        text-decoration:none;
-        font-weight:bold;
-    }
-    .delete-btn {
-        background:#e74c3c;
-        color:white;
-        padding:8px 12px;
-        border-radius:6px;
-        font-weight:bold;
-        cursor:pointer;
-        border:none;
-    }
-    .no-files {
-        grid-column:1/-1;
-        text-align:center;
-        color:#888;
-    }
+    <style>
+        body {
+            font-family:'Segoe UI';
+            background:#f4f7f9;
+            margin:0;
+            padding:20px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+        }
+        .header {
+            background:#4CAF50;
+            color:white;
+            width:100%;
+            text-align:center;
+            padding:15px;
+            border-radius:8px;
+            margin-bottom:20px;
+        }
+        .link-box {
+            background:white;
+            padding:20px;
+            border-radius:12px;
+            width:100%;
+            max-width:600px;
+            margin-bottom:30px;
+            border:1px solid #e0e0e0;
+            text-align:center;
+        }
+        #clientLink a {
+            color:#4CAF50;
+            font-weight:bold;
+            word-break:break-all;
+            text-decoration:none;
+        }
+        #gallery {
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+            gap:20px;
+            width:100%;
+            max-width:1200px;
+        }
+        .media-item {
+            background:white;
+            border-radius:12px;
+            overflow:hidden;
+            box-shadow:0 4px 12px rgba(0,0,0,0.08);
+            display:flex;
+            flex-direction:column;
+        }
+        .media-container {
+            height:180px;
+            background:#fafafa;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .media-item img,
+        .media-item video {
+            width:100%;
+            height:100%;
+            object-fit:cover;
+        }
+        .media-footer {
+            padding:12px;
+        }
+        .actions {
+            display:flex;
+            gap:10px;
+            justify-content:center;
+        }
+        .download-btn {
+            background:#4CAF50;
+            color:white;
+            padding:8px 12px;
+            border-radius:6px;
+            text-decoration:none;
+            font-weight:bold;
+        }
+        .delete-btn {
+            background:#e74c3c;
+            color:white;
+            padding:8px 12px;
+            border-radius:6px;
+            font-weight:bold;
+            cursor:pointer;
+            border:none;
+        }
+        .no-files {
+            grid-column:1/-1;
+            text-align:center;
+            color:#888;
+        }
 
-    /* --- ستايلات الرسائل الاحترافية الجديدة --- */
-    /* نافذة التأكيد (Modal) */
-    .modal-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5);
-        display: none; /* مخفي افتراضياً */
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-    .modal-box {
-        background: white;
-        padding: 25px;
-        border-radius: 12px;
-        text-align: center;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        max-width: 300px;
-        width: 90%;
-    }
-    .modal-btns {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        margin-top: 20px;
-    }
-    .modal-btn {
-        padding: 8px 20px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    .confirm-del-btn { background: #e74c3c; color: white; }
-    .cancel-del-btn { background: #ccc; color: #333; }
+        /* Modal & Toast Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 300px;
+            width: 90%;
+        }
+        .modal-btns {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .modal-btn {
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .confirm-del-btn { background: #e74c3c; color: white; }
+        .cancel-del-btn { background: #ccc; color: #333; }
 
-    /* رسالة النجاح (Toast) */
-    #toast {
-        position: fixed;
-        bottom: 20px;
-        background: #333;
-        color: white;
-        padding: 12px 25px;
-        border-radius: 30px;
-        display: none;
-        z-index: 2000;
-        animation: fadeInUp 0.4s ease;
-    }
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-</style>
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 30px;
+            display: none;
+            z-index: 2000;
+            animation: fadeInUp 0.4s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 
 <body>
@@ -165,11 +160,11 @@
 
 <div class="link-box">
     <button id="generateLinkBtn" style="padding:10px 20px; background:#4CAF50; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Generate My Link</button>
-    <p id="clientLink"></p>
+    <p id="clientLink" style="margin-top: 15px;"></p>
 </div>
 
 <div id="gallery">
-    <div class="no-files">Connecting...</div>
+    <div class="no-files">Connecting to server...</div>
 </div>
 
 <div class="modal-overlay" id="confirmModal">
@@ -186,100 +181,113 @@
 <div id="toast">Action successful!</div>
 
 <script type="module">
-import { auth, db } from "./firebase.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
-import { doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+    import { auth, db } from "./firebase.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
+    import { doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
 
-const socket = io("https://mhmdyxt.github.io/send-f/send.html");
-let currentCode = null;
+    // 1. تصحيح رابط السيرفر ليكون رابط الـ Backend على Railway
+    const socket = io("https://send-b-production.up.railway.app");
+    
+    let currentCode = null;
 
-// وظيفة إظهار رسالة النجاح
-function showToast(msg) {
-    const toast = document.getElementById("toast");
-    toast.innerText = msg;
-    toast.style.display = "block";
-    setTimeout(() => { toast.style.display = "none"; }, 3000);
-}
+    function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.innerText = msg;
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 3000);
+    }
 
-onAuthStateChanged(auth, async (user) => {
-    if (!user) return location.href="index.html";
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) return location.href="index.html";
 
-    const snap = await getDoc(doc(db,"users",user.uid));
-    const userData = snap.data();
+        const snap = await getDoc(doc(db,"users",user.uid));
+        const userData = snap.data();
 
-    currentCode = userData.role === "admin"
-        ? (localStorage.getItem("viewingCode") || "1")
-        : userData.brandCode;
+        currentCode = userData.role === "admin"
+            ? (localStorage.getItem("viewingCode") || "1")
+            : userData.brandCode;
 
-    socket.emit("register-owner", currentCode);
-});
+        // إرسال الكود للسيرفر لاستلام الملفات الخاصة به
+        socket.emit("register-owner", currentCode);
+    });
 
-// توليد اللينك
-document.getElementById("generateLinkBtn").onclick = () => {
-    const link = `${location.origin}/send.html?code=${currentCode}`;
-    document.getElementById("clientLink").innerHTML =
-        `<a href="${link}" target="_blank">${link}</a>`;
-    showToast("Link generated successfully!");
-};
+    // 2. تصحيح وظيفة توليد الرابط لتجنب 404 على GitHub Pages
+    document.getElementById("generateLinkBtn").onclick = () => {
+        if(!currentCode) {
+            showToast("Error: Code not loaded yet!");
+            return;
+        }
 
-// استقبال الملفات
-socket.on("existing-media", list => {
-    const g = document.getElementById("gallery");
-    g.innerHTML = list.length ? "" : `<div class="no-files">No files yet</div>`;
-    list.forEach(addMediaToUI);
-});
+        // بناء الرابط باستخدام المسار الحالي لضمان تضمين اسم المستودع (send-f)
+        const baseUrl = window.location.origin + window.location.pathname.replace("user.html", "send.html");
+        const link = `${baseUrl}?code=${currentCode}`;
 
-socket.on("new-media", addMediaToUI);
-
-// إضافة عنصر
-function addMediaToUI(data) {
-    const gallery = document.getElementById("gallery");
-    gallery.querySelector(".no-files")?.remove();
-
-    const div = document.createElement("div");
-    div.className = "media-item";
-    div.dataset.id = data.id;
-
-    let preview =
-        data.type === "image" ? `<img src="${data.data}">` :
-        data.type === "video" ? `<video src="${data.data}" controls></video>` :
-        `<div class="file-icon">📄</div>`;
-
-    div.innerHTML = `
-        <div class="media-container">${preview}</div>
-        <div class="media-footer">
-            <div class="actions">
-                <a class="download-btn" href="${data.data}" download="${data.name}">⬇</a>
-                <button class="delete-btn">🗑</button>
-            </div>
-        </div>
-    `;
-
-    // --- نظام الحذف المطور بدون Alert ---
-    div.querySelector(".delete-btn").onclick = () => {
-        const modal = document.getElementById("confirmModal");
-        modal.style.display = "flex";
-
-        // عند الضغط على تأكيد
-        document.getElementById("modalConfirm").onclick = async () => {
-            await deleteDoc(doc(db,"media",data.id));
-            div.remove();
-            modal.style.display = "none";
-            showToast("File deleted successfully");
-
-            if (!gallery.children.length) {
-                gallery.innerHTML = `<div class="no-files">No files yet</div>`;
-            }
-        };
-
-        // عند الضغط على إلغاء
-        document.getElementById("modalCancel").onclick = () => {
-            modal.style.display = "none";
-        };
+        document.getElementById("clientLink").innerHTML =
+            `<a href="${link}" target="_blank">${link}</a>`;
+            
+        showToast("Link generated successfully!");
     };
 
-    gallery.prepend(div);
-}
+    // استقبال الميديا السابقة
+    socket.on("existing-media", list => {
+        const g = document.getElementById("gallery");
+        g.innerHTML = list.length ? "" : `<div class="no-files">No files yet</div>`;
+        list.forEach(addMediaToUI);
+    });
+
+    // استقبال ميديا جديدة فور رفعها
+    socket.on("new-media", addMediaToUI);
+
+    function addMediaToUI(data) {
+        const gallery = document.getElementById("gallery");
+        gallery.querySelector(".no-files")?.remove();
+
+        const div = document.createElement("div");
+        div.className = "media-item";
+        div.dataset.id = data.id;
+
+        let preview =
+            data.type === "image" ? `<img src="${data.data}">` :
+            data.type === "video" ? `<video src="${data.data}" controls></video>` :
+            `<div class="file-icon" style="font-size:50px; text-align:center; padding:40px;">📄</div>`;
+
+        div.innerHTML = `
+            <div class="media-container">${preview}</div>
+            <div class="media-footer">
+                <div class="actions">
+                    <a class="download-btn" href="${data.data}" download="${data.name}">⬇</a>
+                    <button class="delete-btn">🗑</button>
+                </div>
+            </div>
+        `;
+
+        // نظام الحذف
+        div.querySelector(".delete-btn").onclick = () => {
+            const modal = document.getElementById("confirmModal");
+            modal.style.display = "flex";
+
+            document.getElementById("modalConfirm").onclick = async () => {
+                try {
+                    await deleteDoc(doc(db,"media",data.id));
+                    div.remove();
+                    modal.style.display = "none";
+                    showToast("File deleted successfully");
+
+                    if (!gallery.children.length) {
+                        gallery.innerHTML = `<div class="no-files">No files yet</div>`;
+                    }
+                } catch (err) {
+                    showToast("Error deleting file");
+                }
+            };
+
+            document.getElementById("modalCancel").onclick = () => {
+                modal.style.display = "none";
+            };
+        };
+
+        gallery.prepend(div);
+    }
 </script>
 
 </body>
