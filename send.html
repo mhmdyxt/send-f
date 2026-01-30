@@ -1,77 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Send Media</title>
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 40px; margin: 0; }
-    
-    .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
-    
-    h2 { color: #4CAF50; margin-bottom: 25px; font-weight: 600; }
-    
-    .input-group { margin-bottom: 15px; }
-    
-    input[type="file"] { width: 100%; padding: 10px; border: 2px dashed #ddd; border-radius: 8px; cursor: pointer; box-sizing: border-box; }
-    input[type="file"]:hover { border-color: #4CAF50; }
-
-    /* حاوية الرسائل - مكانها فوق الزر مباشرة */
-    #status-msg {
-        width: 100%;
-        padding: 10px;
-        margin: 10px 0;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        display: none; /* مخفي */
-        box-sizing: border-box;
-        transition: all 0.3s ease;
-    }
-
-    .msg-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
-    .msg-error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-    .msg-info { background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
-
-    button { 
-        background: #4CAF50; color: white; border: none; padding: 14px; width: 100%; 
-        border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; 
-        transition: 0.3s; margin-top: 5px;
-    }
-    button:hover { background: #388E3C; transform: translateY(-1px); }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-</style>
+    <meta charset="UTF-8">
+    <title>Send Media</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 40px; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
+        h2 { color: #4CAF50; margin-bottom: 25px; font-weight: 600; }
+        .input-group { margin-bottom: 15px; }
+        input[type="file"] { width: 100%; padding: 10px; border: 2px dashed #ddd; border-radius: 8px; cursor: pointer; box-sizing: border-box; }
+        input[type="file"]:hover { border-color: #4CAF50; }
+        #status-msg { width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; font-size: 14px; font-weight: 500; display: none; box-sizing: border-box; transition: all 0.3s ease; }
+        .msg-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .msg-error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .msg-info { background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+        button { background: #4CAF50; color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; margin-top: 5px; }
+        button:hover { background: #388E3C; transform: translateY(-1px); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
 </head>
 <body>
 
 <div class="card">
     <h2>Send File</h2>
-    
     <div class="input-group">
         <input type="file" id="file">
     </div>
-
     <div id="status-msg"></div>
-
     <button id="sendBtn" onclick="send()">Send</button>
 </div>
 
 <script>
+// الربط بسيرفر ريلواي
 const socket = io("https://send-b-production.up.railway.app");
 
 const params = new URLSearchParams(window.location.search);
-const brandCode = params.get("code");
+let brandCode = params.get("code");
 
-// تنبيه فوري لو الكود خطأ
-if (!brandCode || Number(brandCode) === 0) {
-    displayFeedback("Invalid Link: No brand code found.", "error");
+// التأكد من صحة الكود وتحويله لرقم فوراً
+if (!brandCode || isNaN(brandCode)) {
+    displayFeedback("Invalid Link: No valid brand code found.", "error");
     document.getElementById("sendBtn").disabled = true;
+} else {
+    brandCode = Number(brandCode); // تحويله لرقم ليتوافق مع السيرفر
 }
 
 function displayFeedback(text, type) {
     const msgBox = document.getElementById("status-msg");
     msgBox.innerText = text;
-    msgBox.className = ""; // تنظيف الكلاسات
+    msgBox.className = ""; 
     
     if (type === "success") msgBox.classList.add("msg-success");
     else if (type === "error") msgBox.classList.add("msg-error");
@@ -79,49 +57,59 @@ function displayFeedback(text, type) {
 
     msgBox.style.display = "block";
 
-    // إذا كانت رسالة نجاح، نخفيها بعد فترة، لو خطأ نتركها لينتبه المستخدم
-    if (type === "success" || type === "info") {
-        setTimeout(() => {
-            msgBox.style.display = "none";
-        }, 4000);
+    if (type === "success") {
+        setTimeout(() => { msgBox.style.display = "none"; }, 5000);
     }
 }
 
 function send() {
     const fileInput = document.getElementById("file");
     const file = fileInput.files[0];
+    const btn = document.getElementById("sendBtn");
 
     if (!file) {
         displayFeedback("⚠️ Please select a file first.", "error");
         return;
     }
 
-    // إظهار حالة جاري الإرسال
+    // التحقق من حالة الاتصال بالسيرفر قبل البدء
+    if (!socket.connected) {
+        displayFeedback("❌ Not connected to server. Please refresh.", "error");
+        return;
+    }
+
     displayFeedback("⏳ Sending file, please wait...", "info");
-    const btn = document.getElementById("sendBtn");
-    btn.disabled = true; // منع الضغط المتكرر أثناء الرفع
+    btn.disabled = true;
 
     const reader = new FileReader();
     reader.onload = () => {
-        socket.emit("send-media", {
-            brandCode,
-            name: file.name,
-            type: file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file",
-            data: reader.result
-        });
+        try {
+            socket.emit("send-media", {
+                brandCode: brandCode, // الرقم المعدل
+                name: file.name,
+                type: file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file",
+                data: reader.result
+            });
 
-        displayFeedback("✅ File sent successfully!", "success");
-        fileInput.value = ""; // مسح الملف من الخانة
+            displayFeedback("✅ File sent successfully!", "success");
+            fileInput.value = ""; 
+        } catch (err) {
+            displayFeedback("❌ Connection error. Try again.", "error");
+        }
         btn.disabled = false;
     };
 
     reader.onerror = () => {
-        displayFeedback("❌ Error reading file. Try again.", "error");
+        displayFeedback("❌ Error reading file.", "error");
         btn.disabled = false;
     };
 
     reader.readAsDataURL(file);
 }
+
+// مراقبة الاتصال في الخلفية
+socket.on("connect", () => { console.log("Connected to Railway Server"); });
+socket.on("connect_error", () => { displayFeedback("❌ Server Connection Error", "error"); });
 </script>
 
 </body>
