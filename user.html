@@ -164,7 +164,7 @@
 </div>
 
 <div id="gallery">
-    <div class="no-files">Connecting to server...</div>
+    <div class="no-files">Connecting...</div>
 </div>
 
 <div class="modal-overlay" id="confirmModal">
@@ -185,7 +185,7 @@
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
     import { doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
 
-    // 1. تصحيح رابط السيرفر ليكون رابط الـ Backend على Railway
+    // التصحيح 1: الربط بسيرفر Railway مباشرة
     const socket = io("https://send-b-production.up.railway.app");
     
     let currentCode = null;
@@ -207,20 +207,20 @@
             ? (localStorage.getItem("viewingCode") || "1")
             : userData.brandCode;
 
-        // إرسال الكود للسيرفر لاستلام الملفات الخاصة به
         socket.emit("register-owner", currentCode);
     });
 
-    // 2. تصحيح وظيفة توليد الرابط لتجنب 404 على GitHub Pages
+    // التصحيح 2: وظيفة توليد الرابط الصحيح (تأخذ في الاعتبار اسم المستودع send-f)
     document.getElementById("generateLinkBtn").onclick = () => {
         if(!currentCode) {
-            showToast("Error: Code not loaded yet!");
+            showToast("Wait for code to load...");
             return;
         }
 
-        // بناء الرابط باستخدام المسار الحالي لضمان تضمين اسم المستودع (send-f)
-        const baseUrl = window.location.origin + window.location.pathname.replace("user.html", "send.html");
-        const link = `${baseUrl}?code=${currentCode}`;
+        // قراءة المسار الحالي بدقة لضمان بقاء اسم المستودع في اللينك
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+        const link = `${baseUrl}/send.html?code=${currentCode}`;
 
         document.getElementById("clientLink").innerHTML =
             `<a href="${link}" target="_blank">${link}</a>`;
@@ -228,14 +228,12 @@
         showToast("Link generated successfully!");
     };
 
-    // استقبال الميديا السابقة
     socket.on("existing-media", list => {
         const g = document.getElementById("gallery");
         g.innerHTML = list.length ? "" : `<div class="no-files">No files yet</div>`;
         list.forEach(addMediaToUI);
     });
 
-    // استقبال ميديا جديدة فور رفعها
     socket.on("new-media", addMediaToUI);
 
     function addMediaToUI(data) {
@@ -249,7 +247,7 @@
         let preview =
             data.type === "image" ? `<img src="${data.data}">` :
             data.type === "video" ? `<video src="${data.data}" controls></video>` :
-            `<div class="file-icon" style="font-size:50px; text-align:center; padding:40px;">📄</div>`;
+            `<div class="file-icon" style="font-size:50px; padding:40px; text-align:center;">📄</div>`;
 
         div.innerHTML = `
             <div class="media-container">${preview}</div>
@@ -261,23 +259,18 @@
             </div>
         `;
 
-        // نظام الحذف
         div.querySelector(".delete-btn").onclick = () => {
             const modal = document.getElementById("confirmModal");
             modal.style.display = "flex";
 
             document.getElementById("modalConfirm").onclick = async () => {
-                try {
-                    await deleteDoc(doc(db,"media",data.id));
-                    div.remove();
-                    modal.style.display = "none";
-                    showToast("File deleted successfully");
+                await deleteDoc(doc(db,"media",data.id));
+                div.remove();
+                modal.style.display = "none";
+                showToast("Deleted!");
 
-                    if (!gallery.children.length) {
-                        gallery.innerHTML = `<div class="no-files">No files yet</div>`;
-                    }
-                } catch (err) {
-                    showToast("Error deleting file");
+                if (!gallery.children.length) {
+                    gallery.innerHTML = `<div class="no-files">No files yet</div>`;
                 }
             };
 
