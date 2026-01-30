@@ -190,7 +190,7 @@ import { auth, db } from "./firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
 import { doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
 
-const socket = io("http://localhost:3000");
+const socket = io("https://send-b-production.up.railway.app");
 let currentCode = null;
 
 // وظيفة إظهار رسالة النجاح
