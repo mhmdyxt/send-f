@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <style>
+        body{ font-family:Arial; background:#f4f7f9; margin:0; padding:0; display:flex; flex-direction:column; align-items:center; }
+        h2{ background:#4CAF50; color:white; width:100%; text-align:center; padding:20px 0; margin:0; font-size:28px; }
+        .box{ background:#fff; padding:30px; width:350px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,.1); margin:20px 0; }
+        input,button{ width:100%; padding:10px; margin-top:10px; box-sizing: border-box; }
+        button{ background:#4CAF50; border:none; color:white; cursor:pointer; font-weight: bold; }
+        button:hover{ background:#45a049; }
+        /* ستايل قائمة المستخدمين الجديد */
+        .users-list { width: 100%; max-width: 410px; margin-bottom: 30px; }
+        .user-item { background: white; padding: 15px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd; }
+        .view-btn { width: auto; margin-top: 0; background: #2196F3; padding: 5px 15px; }
+    </style>
+</head>
+<body>
+
+<h2>Admin Dashboard</h2>
+
+<div class="box">
+    <h3>Add New User</h3>
+    <input id="userEmail" placeholder="User Email">
+    <input id="userPassword" type="password" placeholder="User Password">
+    <input id="userCode" type="number" placeholder="Brand Code (2-200)">
+    <button id="addUserBtn">Add User</button>
+</div>
+
+<div class="box">
+    <h3>My Admin Files</h3>
+    <p style="font-size: 13px; color: #666;">View files sent to Admin Code (1)</p>
+    <button onclick="viewDashboard('1')" style="background: #e91e63;">Open My Dashboard</button>
+</div>
+
+<div class="users-list" id="usersContainer">
+    <h3 style="text-align: center; color: #555;">Registered Users</h3>
+</div>
+
+<script type="module">
+import { auth, db } from "./firebase.js";
+import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
+import { doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+
+// وظيفة عرض داشبورد أي كود - تم تغيير الرابط إلى user.html
+window.viewDashboard = (code) => {
+    localStorage.setItem("viewingCode", code);
+    window.location.href = 'user.html'; 
+};
+
+// تحميل قائمة الـ Users
+async function loadUsersList() {
+    const container = document.getElementById("usersContainer");
+    const querySnapshot = await getDocs(collection(db, "usersByCode"));
+    querySnapshot.forEach((doc) => {
+        if (doc.id === "1") return; // تجاهل كود الأدمن في القائمة
+        const div = document.createElement("div");
+        div.className = "user-item";
+        div.innerHTML = `<span>Brand Code: <b>${doc.id}</b></span> 
+                         <button class="view-btn" onclick="viewDashboard('${doc.id}')">View</button>`;
+        container.appendChild(div);
+    });
+}
+loadUsersList();
+
+const addBtn = document.getElementById("addUserBtn");
+addBtn.onclick = async () => {
+    const email = document.getElementById("userEmail").value.trim();
+    const password = document.getElementById("userPassword").value;
+    const code = Number(document.getElementById("userCode").value);
+
+    if (!email || !password || !code) return alert("All fields required");
+    if (code < 2) return alert("Brand code must be 2 or higher (1 is for Admin)");
+
+    try {
+        const codeRef = doc(db, "usersByCode", code.toString());
+        const codeSnap = await getDoc(codeRef);
+        if (codeSnap.exists()) return alert("This brand code is already taken!");
+
+        // إنشاء حساب جديد
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+
+        // حفظ البيانات مع تغيير المسمى لـ user
+        await setDoc(doc(db, "users", userCred.user.uid), { role: "user", brandCode: code });
+        await setDoc(doc(db, "usersByCode", code.toString()), { uid: userCred.user.uid });
+
+        alert("User added successfully!");
+        location.reload(); 
+    } catch (e) { alert("Error: " + e.message); }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign In</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { background: #fff; padding: 30px; width: 350px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,.1); }
+        h2 { text-align: center; color: #4CAF50; }
+        input, button { width: 100%; padding: 12px; margin-top: 15px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background: #4CAF50; border: none; color: #fff; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Sign In</h2>
+        <input id="email" type="email" placeholder="Email Address">
+        <input id="password" type="password" placeholder="Password">
+        <button id="loginBtn">Login</button>
+    </div>
+
+<script type="module">
+    import { auth, db } from "./firebase.js";
+    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+
+    document.getElementById("loginBtn").onclick = async () => {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        try {
+            const userCred = await signInWithEmailAndPassword(auth, email, password);
+            const snap = await getDoc(doc(db, "users", userCred.user.uid));
+
+            if (snap.exists()) {
+                const userData = snap.data();
+                // تخزين الكود للجميع (أدمن أو أونر)
+                const codeValue = (userData.brandCode !== undefined) ? String(userData.brandCode) : "0";
+                localStorage.setItem("brandCode", codeValue);
+
+                if (userData.role === "admin") {
+                    window.location.href = "admin.html";
+                } else {
+                    window.location.href = "user.html";
+                }
+            }
+        } catch (e) {
+            alert("Login Failed: " + e.message);
+        }
+    };
+</script>
+</body>
+</html>
