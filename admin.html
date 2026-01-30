@@ -11,17 +11,16 @@
         button{ background:#4CAF50; border:none; color:white; cursor:pointer; font-weight: bold; }
         button:hover{ background:#45a049; }
         
-        /* ستايل قائمة المستخدمين */
-        .users-list { width: 100%; max-width: 410px; margin-bottom: 30px; }
+        .users-list { width: 100%; max-width: 450px; margin-bottom: 30px; }
         .user-item { 
             background: white; padding: 15px; margin-bottom: 8px; border-radius: 8px; 
             display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd; 
         }
-        .user-info { display: flex; flex-direction: column; }
+        .user-info { display: flex; flex-direction: column; gap: 2px; }
         .action-btns { display: flex; gap: 5px; }
         
-        .view-btn { width: auto; margin-top: 0; background: #2196F3; padding: 5px 12px; font-size: 13px; }
-        .del-btn { width: auto; margin-top: 0; background: #f44336; padding: 5px 12px; font-size: 13px; }
+        .view-btn { width: auto; margin: 0; background: #2196F3; padding: 5px 12px; font-size: 13px; }
+        .delete-btn { width: auto; margin: 0; background: #f44336; padding: 5px 12px; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -57,27 +56,27 @@ window.viewDashboard = (code) => {
     window.location.href = 'user.html'; 
 };
 
-// وظيفة الحذف النهائي (تحرير الكود والحساب)
-window.deleteAccount = async (uid, code) => {
-    if(!confirm(`هل أنت متأكد من حذف الحساب (كود ${code}) نهائياً؟ سيصبح الكود متاحاً للاستخدام مرة أخرى.`)) return;
+// وظيفة الحذف النهائي (Firestore)
+window.deleteUser = async (uid, code) => {
+    if (!confirm(`هل أنت متأكد من حذف الحساب (كود ${code})؟ سيصبح الكود متاحاً مرة أخرى.`)) return;
 
     try {
-        // 1. حذف ربط الكود (لإعادة التدوير)
+        // 1. حذف مرجع الكود لإتاحته مرة أخرى
         await deleteDoc(doc(db, "usersByCode", code.toString()));
-        
-        // 2. حذف بيانات المستخدم الأساسية
+        // 2. حذف بيانات المستخدم
         await deleteDoc(doc(db, "users", uid));
-        
-        alert("تم الحذف بنجاح. الكود أصبح حراً الآن.");
-        location.reload();
+
+        alert("تم الحذف بنجاح!");
+        location.reload(); 
     } catch (e) {
         alert("خطأ أثناء الحذف: " + e.message);
     }
 };
 
-// تحميل قائمة الـ Users مع الأزرار
+// تحميل قائمة الـ Users مع زر الحذف والإيميل
 async function loadUsersList() {
     const container = document.getElementById("usersContainer");
+    // جلب من "users" لعرض الكود والإيميل معاً
     const querySnapshot = await getDocs(collection(db, "users"));
     
     querySnapshot.forEach((userDoc) => {
@@ -89,12 +88,13 @@ async function loadUsersList() {
         div.innerHTML = `
             <div class="user-info">
                 <span>Code: <b>${data.brandCode}</b></span>
-                <small style="color:#888;">${data.email || ''}</small>
+                <small style="color: #666;">${data.email || 'No Email'}</small>
             </div>
             <div class="action-btns">
                 <button class="view-btn" onclick="viewDashboard('${data.brandCode}')">View</button>
-                <button class="del-btn" onclick="deleteAccount('${userDoc.id}', '${data.brandCode}')">Delete</button>
-            </div>`;
+                <button class="delete-btn" onclick="deleteUser('${userDoc.id}', '${data.brandCode}')">Delete</button>
+            </div>
+        `;
         container.appendChild(div);
     });
 }
@@ -110,14 +110,15 @@ addBtn.onclick = async () => {
     if (code < 2) return alert("Brand code must be 2 or higher");
 
     try {
-        // فحص هل الكود محجوز حالياً؟
+        // التحقق هل الكود متاح؟
         const codeRef = doc(db, "usersByCode", code.toString());
         const codeSnap = await getDoc(codeRef);
-        if (codeSnap.exists()) return alert("هذا الكود محجوز حالياً، قم بحذف الحساب القديم أولاً.");
+        if (codeSnap.exists()) return alert("هذا الكود مستخدم بالفعل!");
 
+        // إنشاء حساب في Auth
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
 
-        // حفظ البيانات
+        // حفظ في Firestore مع إضافة حقل الإيميل للعرض
         await setDoc(doc(db, "users", userCred.user.uid), { 
             role: "user", 
             brandCode: code,
@@ -125,7 +126,7 @@ addBtn.onclick = async () => {
         });
         await setDoc(doc(db, "usersByCode", code.toString()), { uid: userCred.user.uid });
 
-        alert("User added!");
+        alert("User added successfully!");
         location.reload(); 
     } catch (e) { alert("Error: " + e.message); }
 };
