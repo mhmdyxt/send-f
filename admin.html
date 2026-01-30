@@ -35,14 +35,14 @@
     <button id="addUserBtn">Add User</button>
 </div>
 
-<div class="box">
+<div class="box" style="border-left: 5px solid #e91e63;">
     <h3>My Admin Files</h3>
-    <p style="font-size: 13px; color: #666;">View files sent to Admin Code (1)</p>
-    <button onclick="viewDashboard('1')" style="background: #e91e63;">Open My Dashboard</button>
+    <p style="font-size: 13px; color: #666;">View files sent to Admin Code (1) only</p>
+    <button id="adminDashBtn" style="background: #e91e63;">Open My Dashboard</button>
 </div>
 
 <div class="users-list" id="usersContainer">
-    <h3 style="text-align: center; color: #555;">Registered Users</h3>
+    <h3 style="text-align: center; color: #555;">Registered Users Management</h3>
 </div>
 
 <script type="module">
@@ -50,33 +50,29 @@ import { auth, db } from "./firebase.js";
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-auth.js";
 import { doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
 
-// وظيفة عرض داشبورد أي كود
-window.viewDashboard = (code) => {
-    localStorage.setItem("viewingCode", code);
+// وظيفة التنقل الموحدة - تضمن فتح داشبورد الحساب المطلوب فقط
+window.goToDashboard = (code) => {
+    localStorage.setItem("viewingCode", code.toString());
     window.location.href = 'user.html'; 
 };
 
-// وظيفة الحذف النهائي (Firestore)
+// زر الأدمن يوجه دائماً لكود 1
+document.getElementById("adminDashBtn").onclick = () => goToDashboard('1');
+
+// وظيفة الحذف النهائي
 window.deleteUser = async (uid, code) => {
-    if (!confirm(`هل أنت متأكد من حذف الحساب (كود ${code})؟ سيصبح الكود متاحاً مرة أخرى.`)) return;
-
+    if (!confirm(`حذف حساب كود ${code}؟ سيتم تحرير الكود للاستخدام مرة أخرى.`)) return;
     try {
-        // 1. حذف مرجع الكود لإتاحته مرة أخرى
         await deleteDoc(doc(db, "usersByCode", code.toString()));
-        // 2. حذف بيانات المستخدم
         await deleteDoc(doc(db, "users", uid));
-
         alert("تم الحذف بنجاح!");
         location.reload(); 
-    } catch (e) {
-        alert("خطأ أثناء الحذف: " + e.message);
-    }
+    } catch (e) { alert("Error: " + e.message); }
 };
 
-// تحميل قائمة الـ Users مع زر الحذف والإيميل
+// تحميل القائمة وتخصيص زر View لكل مستخدم
 async function loadUsersList() {
     const container = document.getElementById("usersContainer");
-    // جلب من "users" لعرض الكود والإيميل معاً
     const querySnapshot = await getDocs(collection(db, "users"));
     
     querySnapshot.forEach((userDoc) => {
@@ -87,11 +83,11 @@ async function loadUsersList() {
         div.className = "user-item";
         div.innerHTML = `
             <div class="user-info">
-                <span>Code: <b>${data.brandCode}</b></span>
+                <span>Brand Code: <b>${data.brandCode}</b></span>
                 <small style="color: #666;">${data.email || 'No Email'}</small>
             </div>
             <div class="action-btns">
-                <button class="view-btn" onclick="viewDashboard('${data.brandCode}')">View</button>
+                <button class="view-btn" onclick="goToDashboard('${data.brandCode}')">View Files</button>
                 <button class="delete-btn" onclick="deleteUser('${userDoc.id}', '${data.brandCode}')">Delete</button>
             </div>
         `;
@@ -100,6 +96,7 @@ async function loadUsersList() {
 }
 loadUsersList();
 
+// إنشاء حساب مستخدم جديد
 const addBtn = document.getElementById("addUserBtn");
 addBtn.onclick = async () => {
     const email = document.getElementById("userEmail").value.trim();
@@ -107,18 +104,14 @@ addBtn.onclick = async () => {
     const code = Number(document.getElementById("userCode").value);
 
     if (!email || !password || !code) return alert("All fields required");
-    if (code < 2) return alert("Brand code must be 2 or higher");
+    if (code < 2) return alert("كود 1 محجوز للأدمن فقط");
 
     try {
-        // التحقق هل الكود متاح؟
         const codeRef = doc(db, "usersByCode", code.toString());
         const codeSnap = await getDoc(codeRef);
-        if (codeSnap.exists()) return alert("هذا الكود مستخدم بالفعل!");
+        if (codeSnap.exists()) return alert("هذا الكود محجوز بالفعل!");
 
-        // إنشاء حساب في Auth
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
-
-        // حفظ في Firestore مع إضافة حقل الإيميل للعرض
         await setDoc(doc(db, "users", userCred.user.uid), { 
             role: "user", 
             brandCode: code,
@@ -126,7 +119,7 @@ addBtn.onclick = async () => {
         });
         await setDoc(doc(db, "usersByCode", code.toString()), { uid: userCred.user.uid });
 
-        alert("User added successfully!");
+        alert("تمت إضافة المستخدم بنجاح!");
         location.reload(); 
     } catch (e) { alert("Error: " + e.message); }
 };
